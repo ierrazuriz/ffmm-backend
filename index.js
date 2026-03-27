@@ -55,4 +55,19 @@ app.get('/api/dates', (_req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  // Pre-warm cache with yesterday's data in the background
+  const yesterday = getYesterday();
+  if (!getCachedData(yesterday)) {
+    console.log(`[startup] Pre-fetching data for ${yesterday}...`);
+    fetchDailyData(yesterday)
+      .then((result) => {
+        saveData(yesterday, result);
+        console.log(`[startup] Cache ready: ${result.rows.length} fondos for ${yesterday}`);
+      })
+      .catch((err) => console.error('[startup] Pre-fetch failed:', err.message));
+  } else {
+    console.log(`[startup] Cache already warm for ${yesterday}`);
+  }
+});
