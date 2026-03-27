@@ -1,465 +1,493 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aportes y Rescates FFMM Accionarios</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Aportes y Rescates — FFMM Accionario Nacional</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', sans-serif; background: #f4f6f9; color: #333; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#222;font-size:14px}
 
-    header {
-      background: #1a3a5c;
-      color: white;
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    header h1 { font-size: 1.2rem; font-weight: 600; flex: 1; }
-    header a { color: #aed9f0; font-size: 0.8rem; text-decoration: none; }
-    header a:hover { color: white; }
+    header{background:#1b3a6b;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    header h1{font-size:1.1rem;font-weight:600;flex:1}
+    header a{color:#a8c8f0;font-size:.8rem;text-decoration:none}
+    header a:hover{color:#fff}
 
-    .controls {
-      background: white;
-      padding: 16px 24px;
-      border-bottom: 1px solid #ddd;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .controls label { font-size: 0.9rem; font-weight: 500; }
-    .controls input[type="date"] {
-      padding: 6px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-    .controls select {
-      padding: 6px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      min-width: 200px;
-    }
-    .controls input[type="text"] {
-      padding: 6px 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      min-width: 180px;
-    }
+    .tabs{display:flex;background:#fff;border-bottom:2px solid #dde3ed;padding:0 20px}
+    .tab{padding:10px 20px;cursor:pointer;font-weight:500;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s}
+    .tab.active{color:#1b3a6b;border-color:#1b3a6b}
 
-    button {
-      padding: 7px 16px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-    .btn-primary { background: #1a3a5c; color: white; }
-    .btn-primary:hover { background: #254d7a; }
-    .btn-secondary { background: #e0e0e0; color: #333; }
-    .btn-secondary:hover { background: #ccc; }
-    .btn-warning { background: #e67e22; color: white; }
-    .btn-warning:hover { background: #cf6d17; }
+    .controls{background:#fff;padding:12px 20px;border-bottom:1px solid #e0e5ed;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+    .ctrl-group{display:flex;flex-direction:column;gap:4px}
+    .ctrl-group label{font-size:.78rem;color:#666;font-weight:500;text-transform:uppercase;letter-spacing:.3px}
+    input[type=date]{padding:6px 10px;border:1px solid #ccc;border-radius:5px;font-size:.88rem}
+    .cat-checks{display:flex;flex-direction:column;gap:3px}
+    .cat-checks label{display:flex;align-items:center;gap:6px;font-size:.82rem;cursor:pointer}
+    .cat-checks input[type=checkbox]{accent-color:#1b3a6b;width:14px;height:14px}
+    button{padding:7px 16px;border:none;border-radius:5px;cursor:pointer;font-size:.85rem;font-weight:500;white-space:nowrap}
+    .btn-primary{background:#1b3a6b;color:#fff}.btn-primary:hover{background:#254e8e}
+    .btn-green{background:#27ae60;color:#fff}.btn-green:hover{background:#229954}
+    .btn-orange{background:#e67e22;color:#fff}.btn-orange:hover{background:#ca6f1e}
+    .btn-gray{background:#e0e5ed;color:#444}.btn-gray:hover{background:#ccd3de}
 
-    .status-bar {
-      padding: 8px 24px;
-      background: #eaf4fb;
-      border-bottom: 1px solid #c8e6f5;
-      font-size: 0.82rem;
-      color: #555;
-      min-height: 32px;
-    }
-    .status-bar.loading { background: #fff8e1; border-color: #ffe082; }
-    .status-bar.error { background: #fdecea; border-color: #f5c6cb; color: #c0392b; }
+    .status{padding:7px 20px;background:#eaf3fb;border-bottom:1px solid #c8dff5;font-size:.8rem;color:#555;min-height:30px}
+    .status.loading{background:#fff8e1;border-color:#ffe082}
+    .status.error{background:#fdecea;border-color:#f5c6cb;color:#c0392b}
 
-    .summary {
-      display: flex;
-      gap: 16px;
-      padding: 16px 24px;
-      flex-wrap: wrap;
-    }
-    .summary-card {
-      background: white;
-      border-radius: 8px;
-      padding: 14px 20px;
-      flex: 1;
-      min-width: 180px;
-      border-left: 4px solid #1a3a5c;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-    .summary-card.green { border-color: #27ae60; }
-    .summary-card.red { border-color: #c0392b; }
-    .summary-card.purple { border-color: #8e44ad; }
-    .summary-card .label { font-size: 0.78rem; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
-    .summary-card .value { font-size: 1.3rem; font-weight: 700; margin-top: 4px; }
-    .summary-card .sub { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    .page{display:none;padding:16px 20px 24px}
+    .page.active{display:block}
 
-    .table-wrapper {
-      padding: 0 24px 24px;
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-      font-size: 0.85rem;
-    }
-    thead { background: #1a3a5c; color: white; }
-    th { padding: 10px 12px; text-align: left; white-space: nowrap; cursor: pointer; user-select: none; }
-    th:hover { background: #254d7a; }
-    th.sorted-asc::after { content: ' ↑'; }
-    th.sorted-desc::after { content: ' ↓'; }
-    td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f8fafc; }
+    /* --- CARDS --- */
+    .cards{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .card{background:#fff;border-radius:8px;padding:14px 18px;flex:1;min-width:160px;border-left:4px solid #1b3a6b;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .card.green{border-color:#27ae60}.card.red{border-color:#c0392b}.card.blue{border-color:#2980b9}
+    .card .lbl{font-size:.72rem;color:#888;text-transform:uppercase;letter-spacing:.4px}
+    .card .val{font-size:1.35rem;font-weight:700;margin-top:3px}
+    .card .sub{font-size:.72rem;color:#aaa;margin-top:2px}
+    .positive{color:#27ae60}.negative{color:#c0392b}
 
-    .positive { color: #27ae60; font-weight: 600; }
-    .negative { color: #c0392b; font-weight: 600; }
-    .neutral { color: #555; }
+    /* --- CHART --- */
+    .chart-box{background:#fff;border-radius:8px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+    .chart-box h3{font-size:.9rem;color:#444;margin-bottom:12px;font-weight:600}
+    .chart-wrap{position:relative;height:260px}
+    .chart-legend{display:flex;gap:16px;margin-top:8px;justify-content:center;font-size:.78rem;color:#666}
+    .chart-legend span{display:flex;align-items:center;gap:5px}
+    .dot{width:12px;height:12px;border-radius:50%;display:inline-block}
 
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .badge-accionario { background: #e8f5e9; color: #2e7d32; }
-    .badge-deuda { background: #e3f2fd; color: #1565c0; }
-    .badge-balanceado { background: #fff3e0; color: #e65100; }
-    .badge-other { background: #f5f5f5; color: #555; }
+    /* --- TABLE --- */
+    .table-wrap{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+    .table-toolbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #eee;flex-wrap:wrap}
+    .table-toolbar input{padding:5px 10px;border:1px solid #ccc;border-radius:5px;font-size:.83rem;width:220px}
+    .table-scroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:.82rem}
+    thead{background:#1b3a6b;color:#fff;position:sticky;top:0}
+    th{padding:9px 12px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none}
+    th:hover{background:#254e8e}
+    th.asc::after{content:' ↑'}th.desc::after{content:' ↓'}
+    td{padding:7px 12px;border-bottom:1px solid #f2f4f8;white-space:nowrap}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:#f8fafc}
+    .tfoot td{font-weight:700;background:#edf1f7;border-top:2px solid #ccc}
 
-    .empty { text-align: center; padding: 40px; color: #999; }
+    .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;background:#e8f5e9;color:#2e7d32}
+    .empty-msg{text-align:center;padding:32px;color:#aaa}
 
-    .totals-row td { font-weight: 700; background: #f0f4f8; border-top: 2px solid #ccc; }
+    /* Monthly progress */
+    .month-progress{background:#fff;border-radius:8px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .month-progress h3{font-size:.88rem;color:#444;margin-bottom:8px;font-weight:600}
+    .days-grid{display:flex;flex-wrap:wrap;gap:4px}
+    .day-chip{padding:3px 8px;border-radius:4px;font-size:.72rem;font-weight:500}
+    .day-chip.loaded{background:#e8f5e9;color:#2e7d32}
+    .day-chip.loading{background:#fff3cd;color:#856404}
+    .day-chip.pending{background:#f0f2f5;color:#999}
 
-    .filter-group { display: flex; align-items: center; gap: 8px; }
-
-    footer { text-align: center; padding: 16px; color: #999; font-size: 0.78rem; }
-    footer a { color: #1a3a5c; }
+    footer{text-align:center;padding:12px;color:#aaa;font-size:.75rem}
+    footer a{color:#1b3a6b}
   </style>
 </head>
 <body>
 
 <header>
-  <h1>Aportes y Rescates — Fondos Mutuos Chile</h1>
-  <a href="https://estadisticas2.aafm.cl/DailyStadistics" target="_blank" rel="noopener">
-    Fuente: AAFM.cl ↗
-  </a>
+  <h1>Aportes y Rescates — FFMM Accionario Nacional</h1>
+  <a href="https://estadisticas2.aafm.cl/DailyStadistics" target="_blank" rel="noopener">Fuente: AAFM ↗</a>
 </header>
 
+<div class="tabs">
+  <div class="tab active" onclick="showTab('diario')">Diario</div>
+  <div class="tab" onclick="showTab('mensual')">Acumulado Mensual</div>
+</div>
+
 <div class="controls">
-  <div class="filter-group">
-    <label for="dateInput">Fecha:</label>
-    <input type="date" id="dateInput" />
+  <div class="ctrl-group">
+    <label>Fecha</label>
+    <input type="date" id="dateInput"/>
   </div>
-
-  <div class="filter-group">
-    <label for="categoryFilter">Categoría:</label>
-    <select id="categoryFilter">
-      <option value="">Todas</option>
-      <option value="Accionario" selected>Solo Accionarios</option>
-      <option value="Deuda">Solo Deuda</option>
-      <option value="Balanceado">Balanceados</option>
-    </select>
+  <div class="ctrl-group">
+    <label>Categorías AFM</label>
+    <div class="cat-checks" id="catChecks"></div>
   </div>
-
-  <div class="filter-group">
-    <label for="searchInput">Buscar fondo:</label>
-    <input type="text" id="searchInput" placeholder="Nombre o administradora..." />
+  <div class="ctrl-group" style="justify-content:flex-end;margin-top:auto;gap:6px;display:flex;flex-direction:row;align-items:flex-end">
+    <button class="btn-primary" onclick="loadDay()">Consultar</button>
+    <button class="btn-orange" onclick="refreshDay()">Actualizar</button>
+    <button class="btn-green" onclick="downloadExcel()">⬇ Excel</button>
   </div>
-
-  <button class="btn-primary" onclick="loadData()">Consultar</button>
-  <button class="btn-warning" onclick="refreshData()">Forzar actualización</button>
-  <button class="btn-secondary" onclick="clearSearch()">Limpiar filtros</button>
 </div>
 
-<div class="status-bar" id="statusBar">Selecciona una fecha y presiona Consultar.</div>
+<div class="status" id="status">Cargando datos...</div>
 
-<div class="summary" id="summary" style="display:none"></div>
-
-<div class="table-wrapper">
-  <table id="dataTable">
-    <thead id="tableHead"></thead>
-    <tbody id="tableBody"><tr><td class="empty" colspan="20">Aún no se han cargado datos.</td></tr></tbody>
-  </table>
+<!-- TAB: DIARIO -->
+<div class="page active" id="page-diario">
+  <div class="cards" id="cards"></div>
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <input type="text" id="searchBox" placeholder="Buscar fondo o administradora..." oninput="renderTable()"/>
+      <span id="rowCount" style="color:#888;font-size:.8rem"></span>
+    </div>
+    <div class="table-scroll">
+      <table id="mainTable">
+        <thead id="thead"></thead>
+        <tbody id="tbody"><tr><td class="empty-msg" colspan="20">Presiona Consultar para cargar datos.</td></tr></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </div>
 </div>
 
-<footer>
-  Datos obtenidos desde
-  <a href="https://estadisticas2.aafm.cl/DailyStadistics" target="_blank" rel="noopener">AAFM — Asociación de Fondos Mutuos</a>
-</footer>
+<!-- TAB: MENSUAL -->
+<div class="page" id="page-mensual">
+  <div class="cards" id="monthCards"></div>
+  <div class="chart-box">
+    <h3 id="chartTitle">Flujo Neto Acumulado — mes actual</h3>
+    <div class="chart-wrap"><canvas id="myChart"></canvas></div>
+    <div class="chart-legend">
+      <span><span class="dot" style="background:#27ae60"></span>Flujo neto diario positivo</span>
+      <span><span class="dot" style="background:#c0392b"></span>Flujo neto diario negativo</span>
+      <span><span class="dot" style="background:#1b3a6b"></span>Acumulado</span>
+    </div>
+  </div>
+  <div class="month-progress">
+    <h3>Días cargados</h3>
+    <div class="days-grid" id="daysGrid"></div>
+  </div>
+</div>
+
+<footer>Datos desde <a href="https://estadisticas2.aafm.cl/DailyStadistics" target="_blank">AAFM.cl</a></footer>
 
 <script>
-  // --- Config ---
-  const API = '';  // same origin
+// ─── Config ────────────────────────────────────────────────────────────────
+const DEFAULT_CATS = [
+  'Accionario Nacional',
+  'Accionario Nacional Large Cap',
+  'Accionario Nacional Otros',
+  'Accionario Nacional Small & Mid Cap',
+  'Inversionistas Calificados Accionario Nacional',
+];
 
-  // Sort state
-  let sortCol = null;
-  let sortDir = 1;
-  let allRows = [];
-  let headers = [];
+// ─── State ─────────────────────────────────────────────────────────────────
+let allRows = [], headers = [];
+let sortCol = null, sortDir = 1;
+let chart = null;
+let monthData = []; // [{ date, loaded, aportes, rescates, netFlow }]
 
-  // --- Init ---
-  (function init() {
-    const yesterday = getYesterday();
-    document.getElementById('dateInput').value = yesterday;
-    document.getElementById('dateInput').max = yesterday;
-    loadData();
-  })();
+// ─── Init ──────────────────────────────────────────────────────────────────
+(function init() {
+  // Build category checkboxes
+  const wrap = document.getElementById('catChecks');
+  DEFAULT_CATS.forEach(cat => {
+    const id = 'cat_' + cat.replace(/\s+/g, '_');
+    wrap.innerHTML += `<label><input type="checkbox" id="${id}" value="${cat}" checked onchange="renderTable();buildMonthChart()"> ${cat}</label>`;
+  });
 
-  function getYesterday() {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  }
+  const yesterday = isoDate(-1);
+  const input = document.getElementById('dateInput');
+  input.value = yesterday;
+  input.max = yesterday;
+  input.addEventListener('change', loadDay);
 
-  // --- Data loading ---
-  async function loadData() {
-    const date = document.getElementById('dateInput').value;
-    if (!date) return alert('Selecciona una fecha');
-    setStatus('Cargando datos...', 'loading');
+  loadDay();
+  loadMonthly();
+})();
 
-    try {
-      const res = await fetch(`${API}/api/daily?date=${date}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
+// ─── Tabs ──────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['diario','mensual'][i] === name));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (name === 'mensual' && monthData.length === 0) loadMonthly();
+}
 
-      headers = json.headers || [];
-      allRows = json.rows || [];
-
-      const src = json.source === 'cache'
-        ? `Datos en caché (obtenidos el ${formatDateTime(json.fetched_at)})`
-        : `Datos frescos de AAFM (${formatDateTime(json.fetched_at)})`;
-      setStatus(`${allRows.length} fondos encontrados. ${src}`);
-
-      renderTable();
-    } catch (err) {
-      setStatus(`Error: ${err.message}`, 'error');
-    }
-  }
-
-  async function refreshData() {
-    const date = document.getElementById('dateInput').value;
-    if (!date) return alert('Selecciona una fecha');
-    setStatus('Forzando actualización desde AAFM (puede tardar ~30 segundos)...', 'loading');
-
-    try {
-      const res = await fetch(`${API}/api/refresh?date=${date}`, { method: 'POST' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
-
-      headers = json.headers || [];
-      allRows = json.rows || [];
-      setStatus(`Datos actualizados: ${allRows.length} fondos. Fuente: AAFM`);
-      renderTable();
-    } catch (err) {
-      setStatus(`Error: ${err.message}`, 'error');
-    }
-  }
-
-  function clearSearch() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('categoryFilter').value = '';
+// ─── Daily data ────────────────────────────────────────────────────────────
+async function loadDay() {
+  const date = document.getElementById('dateInput').value;
+  setStatus('Cargando datos para ' + date + '…', 'loading');
+  try {
+    const d = await apiFetch('/api/daily?date=' + date);
+    headers = d.headers || [];
+    allRows = d.rows || [];
+    setStatus(allRows.length + ' fondos cargados. Fuente: ' + (d.source === 'cache' ? 'caché' : 'AAFM') + ' (' + fmtDateTime(d.fetched_at) + ')');
     renderTable();
-  }
+    renderCards();
+  } catch(e) { setStatus('Error: ' + e.message, 'error'); }
+}
 
-  // --- Render ---
-  function getFilteredRows() {
-    const cat = document.getElementById('categoryFilter').value.toLowerCase();
-    const search = document.getElementById('searchInput').value.toLowerCase();
+async function refreshDay() {
+  const date = document.getElementById('dateInput').value;
+  setStatus('Actualizando desde AAFM…', 'loading');
+  try {
+    const d = await apiFetch('/api/refresh?date=' + date, { method: 'POST' });
+    headers = d.headers || [];
+    allRows = d.rows || [];
+    setStatus(allRows.length + ' fondos actualizados desde AAFM.');
+    renderTable();
+    renderCards();
+    loadMonthly(); // refresh monthly too
+  } catch(e) { setStatus('Error: ' + e.message, 'error'); }
+}
 
-    return allRows.filter((row) => {
-      const rowText = Object.values(row).join(' ').toLowerCase();
-      if (cat && !rowText.includes(cat)) return false;
-      if (search && !rowText.includes(search)) return false;
-      return true;
-    });
-  }
+// ─── Render table ──────────────────────────────────────────────────────────
+function getSelectedCats() {
+  return DEFAULT_CATS.filter(cat => {
+    const el = document.getElementById('cat_' + cat.replace(/\s+/g, '_'));
+    return el && el.checked;
+  });
+}
 
-  function renderTable() {
-    const rows = getSortedRows(getFilteredRows());
-    renderSummary(rows);
-    renderHeaders();
-    renderBody(rows);
-  }
-
-  function renderHeaders() {
-    const thead = document.getElementById('tableHead');
-    if (!headers.length) { thead.innerHTML = ''; return; }
-    const extraCols = ['Flujo Neto'];
-    const allCols = [...headers, ...extraCols];
-    thead.innerHTML = `<tr>${allCols.map((h, i) => {
-      let cls = '';
-      if (sortCol === i) cls = sortDir > 0 ? 'sorted-asc' : 'sorted-desc';
-      return `<th class="${cls}" onclick="sortBy(${i})">${h}</th>`;
-    }).join('')}</tr>`;
-  }
-
-  function renderBody(rows) {
-    const tbody = document.getElementById('tableBody');
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td class="empty" colspan="20">No hay datos para los filtros seleccionados.</td></tr>';
-      return;
+function getFilteredRows() {
+  const cats = getSelectedCats();
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  return allRows.filter(r => {
+    if (!cats.includes(r['Categoría AFM'] || '')) return false;
+    if (q) {
+      const text = [r['Administradora'], r['Fondo'], r['Serie']].join(' ').toLowerCase();
+      if (!text.includes(q)) return false;
     }
+    return true;
+  });
+}
 
-    const aportesKey = findKey(headers, ['aporte', 'contributed', 'flujo aporte']);
-    const rescatesKey = findKey(headers, ['rescate', 'rescued', 'flujo rescate']);
+function renderTable() {
+  const rows = sorted(getFilteredRows());
+  renderThead();
+  renderTbody(rows);
+  renderTfoot(rows);
+  renderCards();
+  document.getElementById('rowCount').textContent = rows.length + ' fondos';
+}
 
-    const html = rows.map((row) => {
-      const aporte = parseNum(row[aportesKey]);
-      const rescate = parseNum(row[rescatesKey]);
-      const neto = aporte - rescate;
+const AKEY = () => headers.find(h => h.includes('Flujo Aporte'))  || '';
+const RKEY = () => headers.find(h => h.includes('Flujo Rescate')) || '';
+const PKEY = () => headers.find(h => h.includes('Patrimonio neto')) || '';
 
-      const cells = headers.map((h) => {
-        const val = row[h] || '';
-        if (h.toLowerCase().includes('categoría') || h.toLowerCase().includes('categoria')) {
-          return `<td>${categoryBadge(val)}</td>`;
-        }
-        if (h === aportesKey) return `<td class="positive">${val}</td>`;
-        if (h === rescatesKey) return `<td class="negative">${val}</td>`;
-        return `<td>${val}</td>`;
-      }).join('');
+function renderThead() {
+  const extra = ['Flujo Neto ($)'];
+  const cols = [...headers, ...extra];
+  document.getElementById('thead').innerHTML = '<tr>' + cols.map((h, i) => {
+    let cls = sortCol === i ? (sortDir > 0 ? 'asc' : 'desc') : '';
+    return `<th class="${cls}" onclick="sortBy(${i})">${h}</th>`;
+  }).join('') + '</tr>';
+}
 
-      const netoCls = neto >= 0 ? 'positive' : 'negative';
-      const netoStr = neto !== 0 ? formatNum(neto) : '-';
-      return `<tr>${cells}<td class="${netoCls}">${netoStr}</td></tr>`;
-    }).join('');
-
-    // Totals row
-    const aportesKey2 = aportesKey;
-    const rescatesKey2 = rescatesKey;
-    const totAporte = rows.reduce((s, r) => s + parseNum(r[aportesKey2]), 0);
-    const totRescate = rows.reduce((s, r) => s + parseNum(r[rescatesKey2]), 0);
-    const totNeto = totAporte - totRescate;
-    const totNetoCls = totNeto >= 0 ? 'positive' : 'negative';
-    const totalCells = headers.map((h, i) => {
-      if (i === 0) return `<td><strong>TOTAL (${rows.length} fondos)</strong></td>`;
-      if (h === aportesKey2) return `<td class="positive"><strong>${formatNum(totAporte)}</strong></td>`;
-      if (h === rescatesKey2) return `<td class="negative"><strong>${formatNum(totRescate)}</strong></td>`;
-      return '<td></td>';
-    }).join('');
-
-    tbody.innerHTML = html + `<tr class="totals-row">${totalCells}<td class="${totNetoCls}"><strong>${formatNum(totNeto)}</strong></td></tr>`;
+function renderTbody(rows) {
+  const ak = AKEY(), rk = RKEY();
+  if (!rows.length) {
+    document.getElementById('tbody').innerHTML = '<tr><td class="empty-msg" colspan="30">Sin resultados para los filtros seleccionados.</td></tr>';
+    return;
   }
+  const html = rows.map(r => {
+    const a = parseNum(r[ak]), rv = parseNum(r[rk]);
+    const net = a - rv;
+    const cells = headers.map(h => {
+      const v = r[h] || '';
+      if (h === 'Categoría AFM') return `<td><span class="badge">${v}</span></td>`;
+      if (h === ak) return `<td class="positive">${v}</td>`;
+      if (h === rk) return `<td class="negative">${v}</td>`;
+      return `<td>${v}</td>`;
+    }).join('');
+    const netCls = net >= 0 ? 'positive' : 'negative';
+    return `<tr>${cells}<td class="${netCls}">${fmtCLP(net)}</td></tr>`;
+  }).join('');
+  document.getElementById('tbody').innerHTML = html;
+}
 
-  function renderSummary(rows) {
-    const summary = document.getElementById('summary');
-    const aportesKey = findKey(headers, ['aporte', 'contributed', 'flujo aporte']);
-    const rescatesKey = findKey(headers, ['rescate', 'rescued', 'flujo rescate']);
+function renderTfoot(rows) {
+  const ak = AKEY(), rk = RKEY();
+  const totA = rows.reduce((s, r) => s + parseNum(r[ak]), 0);
+  const totR = rows.reduce((s, r) => s + parseNum(r[rk]), 0);
+  const totN = totA - totR;
+  const cells = headers.map((h, i) => {
+    if (i === 0) return `<td>TOTAL (${rows.length} fondos)</td>`;
+    if (h === ak) return `<td class="positive">${fmtCLP(totA)}</td>`;
+    if (h === rk) return `<td class="negative">${fmtCLP(totR)}</td>`;
+    return '<td></td>';
+  }).join('');
+  document.getElementById('tfoot').innerHTML = `<tr class="tfoot">${cells}<td class="${totN >= 0 ? 'positive' : 'negative'}">${fmtCLP(totN)}</td></tr>`;
+}
 
-    const totAporte = rows.reduce((s, r) => s + parseNum(r[aportesKey]), 0);
-    const totRescate = rows.reduce((s, r) => s + parseNum(r[rescatesKey]), 0);
-    const totNeto = totAporte - totRescate;
+function renderCards() {
+  const rows = getFilteredRows();
+  const ak = AKEY(), rk = RKEY(), pk = PKEY();
+  const totA = rows.reduce((s, r) => s + parseNum(r[ak]), 0);
+  const totR = rows.reduce((s, r) => s + parseNum(r[rk]), 0);
+  const totP = rows.reduce((s, r) => s + parseNum(r[pk]), 0);
+  const net = totA - totR;
+  document.getElementById('cards').innerHTML = `
+    <div class="card green"><div class="lbl">Aportes</div><div class="val">${fmtMM(totA)}</div><div class="sub">MM CLP — ${rows.length} fondos</div></div>
+    <div class="card red"><div class="lbl">Rescates</div><div class="val">${fmtMM(totR)}</div><div class="sub">MM CLP</div></div>
+    <div class="card ${net >= 0 ? '' : 'red'}"><div class="lbl">Flujo Neto</div><div class="val ${net >= 0 ? 'positive' : 'negative'}">${fmtMM(net)}</div><div class="sub">${net >= 0 ? 'Entrada neta' : 'Salida neta'}</div></div>
+    <div class="card blue"><div class="lbl">Patrimonio Neto</div><div class="val">${fmtMM(totP)}</div><div class="sub">MM CLP total</div></div>
+  `;
+}
 
-    summary.style.display = 'flex';
-    summary.innerHTML = `
-      <div class="summary-card green">
-        <div class="label">Total Aportes</div>
-        <div class="value">${formatNum(totAporte)}</div>
-        <div class="sub">${rows.length} fondos</div>
-      </div>
-      <div class="summary-card red">
-        <div class="label">Total Rescates</div>
-        <div class="value">${formatNum(totRescate)}</div>
-        <div class="sub">MM CLP</div>
-      </div>
-      <div class="summary-card ${totNeto >= 0 ? '' : 'red'} purple">
-        <div class="label">Flujo Neto</div>
-        <div class="value ${totNeto >= 0 ? 'positive' : 'negative'}">${formatNum(totNeto)}</div>
-        <div class="sub">${totNeto >= 0 ? 'Entrada neta' : 'Salida neta'}</div>
-      </div>
-    `;
-  }
-
-  // --- Sorting ---
-  function sortBy(colIdx) {
-    if (sortCol === colIdx) {
-      sortDir *= -1;
+// ─── Sort ──────────────────────────────────────────────────────────────────
+function sortBy(i) {
+  if (sortCol === i) sortDir *= -1; else { sortCol = i; sortDir = 1; }
+  renderTable();
+}
+function sorted(rows) {
+  if (sortCol === null) return rows;
+  const allCols = [...headers, 'Flujo Neto ($)'];
+  const key = allCols[sortCol];
+  const ak = AKEY(), rk = RKEY();
+  return [...rows].sort((a, b) => {
+    let av, bv;
+    if (key === 'Flujo Neto ($)') {
+      av = parseNum(a[ak]) - parseNum(a[rk]);
+      bv = parseNum(b[ak]) - parseNum(b[rk]);
     } else {
-      sortCol = colIdx;
-      sortDir = 1;
+      av = parseNum(a[key]);
+      bv = parseNum(b[key]);
+      if (!av && !bv) { av = a[key] || ''; bv = b[key] || ''; }
     }
-    renderTable();
+    if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
+    return String(av).localeCompare(String(bv), 'es') * sortDir;
+  });
+}
+
+// ─── Monthly chart ─────────────────────────────────────────────────────────
+async function loadMonthly() {
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth() + 1;
+  const cats = getSelectedCats().join('|');
+  try {
+    const data = await apiFetch(`/api/monthly-summary?year=${y}&month=${m}&cats=${encodeURIComponent(cats)}`);
+    monthData = data;
+    renderDaysGrid();
+    buildMonthChart();
+    // Fetch uncached days one by one
+    fetchMissingDays(data.filter(d => !d.loaded).map(d => d.date), y, m, cats);
+  } catch(e) { console.error('monthly error', e); }
+}
+
+async function fetchMissingDays(dates, y, m, cats) {
+  for (const date of dates) {
+    try {
+      setStatus(`Cargando historial: ${date}…`, 'loading');
+      await apiFetch('/api/daily?date=' + date);
+      // Re-fetch monthly summary
+      const data = await apiFetch(`/api/monthly-summary?year=${y}&month=${m}&cats=${encodeURIComponent(cats)}`);
+      monthData = data;
+      renderDaysGrid();
+      buildMonthChart();
+    } catch(e) { /* skip */ }
   }
+  setStatus('Historial mensual completo.');
+}
 
-  function getSortedRows(rows) {
-    if (sortCol === null) return rows;
-    const allCols = [...headers, 'Flujo Neto'];
-    const key = allCols[sortCol];
-    const aportesKey = findKey(headers, ['aporte', 'contributed', 'flujo aporte']);
-    const rescatesKey = findKey(headers, ['rescate', 'rescued', 'flujo rescate']);
+function buildMonthChart() {
+  const cats = getSelectedCats();
+  // Re-aggregate with current category selection using cached monthData
+  // For now use whatever the server returned — update on cat change by reloading
+  const loaded = monthData.filter(d => d.loaded);
+  if (!loaded.length) return;
 
-    return [...rows].sort((a, b) => {
-      let av, bv;
-      if (key === 'Flujo Neto') {
-        av = parseNum(a[aportesKey]) - parseNum(a[rescatesKey]);
-        bv = parseNum(b[aportesKey]) - parseNum(b[rescatesKey]);
-      } else {
-        av = parseNum(a[key]) || a[key] || '';
-        bv = parseNum(b[key]) || b[key] || '';
-      }
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
-      return String(av).localeCompare(String(bv)) * sortDir;
-    });
-  }
+  const labels = loaded.map(d => d.date.slice(5)); // MM-DD
+  const nets = loaded.map(d => d.netFlow || 0);
+  const cumulative = nets.reduce((acc, v) => { acc.push((acc[acc.length-1] || 0) + v); return acc; }, []);
 
-  // --- Helpers ---
-  function findKey(keys, candidates) {
-    for (const k of keys) {
-      for (const c of candidates) {
-        if (k.toLowerCase().includes(c)) return k;
-      }
-    }
-    return keys[0] || '';
-  }
+  const barColors = nets.map(v => v >= 0 ? 'rgba(39,174,96,.7)' : 'rgba(192,57,43,.7)');
 
-  function parseNum(val) {
-    if (!val) return 0;
-    const n = parseFloat(String(val).replace(/\./g, '').replace(',', '.').replace(/[^0-9.-]/g, ''));
-    return isNaN(n) ? 0 : n;
-  }
+  const now = new Date();
+  document.getElementById('chartTitle').textContent =
+    `Flujo Neto Acumulado — ${now.toLocaleString('es-CL', { month: 'long', year: 'numeric' })}`;
 
-  function formatNum(n) {
-    if (n === 0) return '0';
-    return n.toLocaleString('es-CL', { maximumFractionDigits: 2 });
-  }
+  // Update month summary cards
+  const totA = loaded.reduce((s, d) => s + (d.aportes || 0), 0);
+  const totR = loaded.reduce((s, d) => s + (d.rescates || 0), 0);
+  const totN = totA - totR;
+  document.getElementById('monthCards').innerHTML = `
+    <div class="card green"><div class="lbl">Aportes acumulados</div><div class="val">${fmtMM(totA)}</div><div class="sub">MM CLP — ${loaded.length} días</div></div>
+    <div class="card red"><div class="lbl">Rescates acumulados</div><div class="val">${fmtMM(totR)}</div><div class="sub">MM CLP</div></div>
+    <div class="card ${totN >= 0 ? '' : 'red'}"><div class="lbl">Neto acumulado</div><div class="val ${totN >= 0 ? 'positive' : 'negative'}">${fmtMM(totN)}</div><div class="sub">${totN >= 0 ? 'Entrada neta' : 'Salida neta'} del mes</div></div>
+  `;
 
-  function formatDateTime(iso) {
-    if (!iso) return '';
-    return new Date(iso).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' });
-  }
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('myChart'), {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Flujo Neto Diario (MM CLP)',
+          data: nets.map(v => v / 1e6),
+          backgroundColor: barColors,
+          yAxisID: 'yBar',
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Acumulado (MM CLP)',
+          data: cumulative.map(v => v / 1e6),
+          borderColor: '#1b3a6b',
+          backgroundColor: 'rgba(27,58,107,.08)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          fill: true,
+          tension: .3,
+          yAxisID: 'yLine',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index' },
+      plugins: { legend: { display: false }, tooltip: {
+        callbacks: {
+          label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('es-CL', { minimumFractionDigits: 1 }) + ' MM'
+        }
+      }},
+      scales: {
+        yBar: { type: 'linear', position: 'right', grid: { display: false }, ticks: { callback: v => v.toLocaleString('es-CL') + ' MM' } },
+        yLine: { type: 'linear', position: 'left', ticks: { callback: v => v.toLocaleString('es-CL') + ' MM' } },
+        x: { grid: { display: false } },
+      },
+    },
+  });
+}
 
-  function categoryBadge(val) {
-    const v = (val || '').toLowerCase();
-    let cls = 'badge-other';
-    if (v.includes('accionario')) cls = 'badge-accionario';
-    else if (v.includes('deuda')) cls = 'badge-deuda';
-    else if (v.includes('balanceado')) cls = 'badge-balanceado';
-    return `<span class="badge ${cls}">${val}</span>`;
-  }
+function renderDaysGrid() {
+  document.getElementById('daysGrid').innerHTML = monthData.map(d =>
+    `<span class="day-chip ${d.loaded ? 'loaded' : 'pending'}">${d.date.slice(5)}</span>`
+  ).join('');
+}
 
-  function setStatus(msg, type = '') {
-    const bar = document.getElementById('statusBar');
-    bar.textContent = msg;
-    bar.className = 'status-bar' + (type ? ` ${type}` : '');
-  }
+// ─── Excel download ────────────────────────────────────────────────────────
+function downloadExcel() {
+  const rows = getFilteredRows();
+  if (!rows.length) return alert('No hay datos para descargar.');
+  const ak = AKEY(), rk = RKEY();
+  const exportRows = rows.map(r => {
+    const a = parseNum(r[ak]), rv = parseNum(r[rk]);
+    return { ...r, 'Flujo Neto ($)': a - rv };
+  });
+  const ws = XLSX.utils.json_to_sheet(exportRows, { header: [...headers, 'Flujo Neto ($)'] });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'FFMM Accionario Nacional');
+  const date = document.getElementById('dateInput').value;
+  XLSX.writeFile(wb, `FFMM_Accionario_Nacional_${date}.xlsx`);
+}
 
-  // Re-render on filter change
-  document.getElementById('categoryFilter').addEventListener('change', renderTable);
-  document.getElementById('searchInput').addEventListener('input', renderTable);
-  document.getElementById('dateInput').addEventListener('change', loadData);
+// ─── Helpers ───────────────────────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+
+function parseNum(v) {
+  if (!v || v === '-') return 0;
+  return parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
+}
+function fmtCLP(n) { return n.toLocaleString('es-CL', { maximumFractionDigits: 0 }); }
+function fmtMM(n) { return (n / 1e6).toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+function fmtDateTime(iso) { if (!iso) return ''; return new Date(iso).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' }); }
+function isoDate(offset = 0) { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().split('T')[0]; }
+function setStatus(msg, type = '') { const b = document.getElementById('status'); b.textContent = msg; b.className = 'status' + (type ? ' ' + type : ''); }
 </script>
 </body>
 </html>
