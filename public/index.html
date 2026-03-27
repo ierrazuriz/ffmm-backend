@@ -704,19 +704,37 @@ function downloadExcel() {
 
 // ─── Histórico Anual ────────────────────────────────────────────────────────
 async function loadHistory() {
+  setStatus('Calculando historial mensual…', 'loading');
   try {
-    histData = await api('/api/monthly-history?months=12');
-    if (!histData.length) {
-      // Auto-recalculate from cache on first load
-      setStatus('Calculando historial mensual desde caché…', 'loading');
-      await api('/api/recalc-history', { method: 'POST' });
-      histData = await api('/api/monthly-history?months=12');
-      setStatus('Historial calculado.');
+    // Build last 12 months list (oldest → newest)
+    const now = new Date();
+    const months = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({ year: d.getFullYear(), month: d.getMonth() + 1 });
     }
+
+    // Fetch each month's daily summary in parallel
+    const results = await Promise.all(months.map(({ year, month }) =>
+      api(`/api/monthly-summary?year=${year}&month=${month}`)
+        .then(days => {
+          const loaded = days.filter(d => d.loaded);
+          if (!loaded.length) return null;
+          const aportes  = loaded.reduce((s, d) => s + (d.aportes  || 0), 0);
+          const rescates = loaded.reduce((s, d) => s + (d.rescates || 0), 0);
+          const ym = `${year}-${String(month).padStart(2, '0')}`;
+          return { year_month: ym, aportes, rescates, net_flow: aportes - rescates,
+                   days_count: loaded.length, working_days: days.length };
+        })
+        .catch(() => null)
+    ));
+
+    histData = results.filter(Boolean);
+    setStatus('');
     renderHistTable();
     buildHistChart();
     renderHistCards();
-  } catch(e) { console.error('history:', e); }
+  } catch(e) { setStatus('Error: ' + e.message, 'error'); }
 }
 
 function renderHistCards() {
