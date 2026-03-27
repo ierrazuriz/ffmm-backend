@@ -270,6 +270,10 @@
 
 <!-- HEADER -->
 <div class="header">
+  <svg width="38" height="30" viewBox="0 0 38 30" style="margin-right:10px;flex-shrink:0">
+    <rect width="38" height="30" rx="5" fill="#f26439"/>
+    <text x="19" y="20" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700" font-size="12" fill="#fff" letter-spacing="1">EMF</text>
+  </svg>
   <div class="header-title">Aportes y Rescates FFMM — Accionario Nacional</div>
   <div class="header-actions">
     <a href="https://estadisticas2.aafm.cl/DailyStadistics" target="_blank" rel="noopener"
@@ -282,6 +286,7 @@
 <div class="navbar">
   <div class="nav-tab active" onclick="showTab('diario')">Aportes y Rescates</div>
   <div class="nav-tab" onclick="showTab('mensual')">Acumulado Mensual</div>
+  <div class="nav-tab" onclick="showTab('historico')">Histórico Anual</div>
 </div>
 
 <!-- CONTROLS -->
@@ -341,6 +346,46 @@
   </div>
 </div>
 
+<!-- TAB: HISTÓRICO ANUAL -->
+<div class="page" id="page-historico">
+  <div class="cards" id="histCards"></div>
+  <div class="chart-box">
+    <div class="chart-header">
+      <h3>Flujo Neto Mensual — Últimos 12 meses</h3>
+      <button class="btn-outline" onclick="recalcHistory()" style="font-size:.78rem;padding:5px 12px">↺ Recalcular</button>
+    </div>
+    <div class="chart-wrap"><canvas id="histChart"></canvas></div>
+    <div class="chart-legend">
+      <span><span class="dot" style="background:#219c4a"></span>Neto mensual positivo</span>
+      <span><span class="dot" style="background:#e53935"></span>Neto mensual negativo</span>
+      <span><span class="dot" style="background:#f26439"></span>Acumulado 12 meses</span>
+    </div>
+  </div>
+  <div class="table-box" style="margin-top:16px">
+    <div class="table-toolbar" style="justify-content:space-between">
+      <span style="font-size:.82rem;font-weight:600;color:var(--text)">Resumen mensual</span>
+      <button class="btn-download download-button" onclick="downloadHistExcel()" style="font-size:.78rem;padding:5px 12px">⬇ Excel</button>
+    </div>
+    <div class="table-scroll" style="max-height:none">
+      <table id="histTable">
+        <thead>
+          <tr>
+            <th>Mes</th>
+            <th>Aportes (MM CLP)</th>
+            <th>Rescates (MM CLP)</th>
+            <th>Flujo Neto (MM CLP)</th>
+            <th>Días cargados</th>
+            <th>Días hábiles</th>
+            <th>Cobertura</th>
+          </tr>
+        </thead>
+        <tbody id="histTbody"><tr><td class="empty-msg" colspan="7">Cargando historial...</td></tr></tbody>
+        <tfoot id="histTfoot"></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
 <footer>Datos obtenidos desde <a href="https://estadisticas2.aafm.cl/DailyStadistics" target="_blank">AAFM — Asociación de Fondos Mutuos</a></footer>
 
 <script>
@@ -357,6 +402,7 @@ const DEFAULT_CATS = [
 let allRows = [], headers = [];
 let sortCol = null, sortDir = 1;
 let chart = null, monthData = [];
+let histChart = null, histData = [];
 let darkMode = localStorage.getItem('dark') === '1';
 
 // ─── Init ──────────────────────────────────────────────────────────────────
@@ -388,14 +434,16 @@ function toggleDark() {
   document.body.classList.toggle('dark-mode', darkMode);
   localStorage.setItem('dark', darkMode ? '1' : '0');
   if (chart) buildMonthChart();
+  if (histChart) buildHistChart();
 }
 
 // ─── Tabs ──────────────────────────────────────────────────────────────────
 function showTab(name) {
   document.querySelectorAll('.nav-tab').forEach((t, i) =>
-    t.classList.toggle('active', ['diario','mensual'][i] === name));
+    t.classList.toggle('active', ['diario','mensual','historico'][i] === name));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
+  if (name === 'historico') loadHistory();
 }
 
 // ─── Daily ─────────────────────────────────────────────────────────────────
@@ -652,6 +700,161 @@ function downloadExcel() {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'FFMM Accionario Nacional');
   XLSX.writeFile(wb, `FFMM_Accionario_Nacional_${document.getElementById('dateInput').value}.xlsx`);
+}
+
+// ─── Histórico Anual ────────────────────────────────────────────────────────
+async function loadHistory() {
+  try {
+    histData = await api('/api/monthly-history?months=12');
+    renderHistTable();
+    buildHistChart();
+    renderHistCards();
+  } catch(e) { console.error('history:', e); }
+}
+
+function renderHistCards() {
+  if (!histData.length) return;
+  const totA = histData.reduce((s,d) => s+(d.aportes||0), 0);
+  const totR = histData.reduce((s,d) => s+(d.rescates||0), 0);
+  const totN = totA - totR;
+  document.getElementById('histCards').innerHTML = `
+    <div class="card c-green"><div class="lbl">Aportes 12 meses</div><div class="val pos">${fmtMM(totA)}</div><div class="sub">MM CLP acumulado</div></div>
+    <div class="card c-red"><div class="lbl">Rescates 12 meses</div><div class="val neg">${fmtMM(totR)}</div><div class="sub">MM CLP acumulado</div></div>
+    <div class="card ${totN>=0?'':'c-red'}"><div class="lbl">Neto 12 meses</div><div class="val ${totN>=0?'pos':'neg'}">${fmtMM(totN)}</div><div class="sub">${totN>=0?'Entrada neta':'Salida neta'}</div></div>
+  `;
+}
+
+function buildHistChart() {
+  if (!histData.length) return;
+  const labels  = histData.map(d => {
+    const [y, m] = d.year_month.split('-');
+    return new Date(+y, +m-1, 1).toLocaleString('es-CL', { month: 'short', year: '2-digit' });
+  });
+  const nets      = histData.map(d => (d.net_flow||0) / 1e6);
+  const cumul     = nets.reduce((acc, v) => { acc.push((acc[acc.length-1]||0)+v); return acc; }, []);
+  const barColors = nets.map(v => v >= 0 ? 'rgba(33,156,74,.75)' : 'rgba(229,57,53,.75)');
+
+  const isDark = document.body.classList.contains('dark-mode');
+  const gridColor = isDark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.06)';
+  const tickColor = isDark ? '#aaa' : '#666';
+
+  if (histChart) histChart.destroy();
+  histChart = new Chart(document.getElementById('histChart'), {
+    data: {
+      labels,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Flujo Neto Mensual (MM CLP)',
+          data: nets,
+          backgroundColor: barColors,
+          yAxisID: 'yBar',
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: 'Acumulado 12 meses (MM CLP)',
+          data: cumul,
+          borderColor: '#f26439',
+          backgroundColor: 'rgba(242,100,57,.08)',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: '#f26439',
+          fill: true,
+          tension: .35,
+          yAxisID: 'yLine',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-CL',{minimumFractionDigits:1})} MM`
+          }
+        }
+      },
+      scales: {
+        yBar:  { type:'linear', position:'right', grid:{ display:false }, ticks:{ color:tickColor, callback: v => v.toLocaleString('es-CL')+' MM' } },
+        yLine: { type:'linear', position:'left',  grid:{ color:gridColor }, ticks:{ color:tickColor, callback: v => v.toLocaleString('es-CL')+' MM' } },
+        x:     { grid:{ display:false }, ticks:{ color:tickColor } },
+      },
+    },
+  });
+}
+
+function renderHistTable() {
+  const tbody = document.getElementById('histTbody');
+  if (!histData.length) {
+    tbody.innerHTML = '<tr><td class="empty-msg" colspan="7">Sin datos históricos disponibles.</td></tr>';
+    document.getElementById('histTfoot').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = histData.map(d => {
+    const [y, m] = d.year_month.split('-');
+    const label = new Date(+y, +m-1, 1).toLocaleString('es-CL', { month: 'long', year: 'numeric' });
+    const net = d.net_flow || 0;
+    const cov = d.working_days ? Math.round(d.days_count / d.working_days * 100) : 0;
+    return `<tr>
+      <td>${label.charAt(0).toUpperCase()+label.slice(1)}</td>
+      <td class="pos">${fmtMM(d.aportes||0)}</td>
+      <td class="neg">${fmtMM(d.rescates||0)}</td>
+      <td class="${net>=0?'pos':'neg'}">${fmtMM(net)}</td>
+      <td>${d.days_count}</td>
+      <td>${d.working_days}</td>
+      <td>${cov}%</td>
+    </tr>`;
+  }).join('');
+
+  const totA = histData.reduce((s,d) => s+(d.aportes||0), 0);
+  const totR = histData.reduce((s,d) => s+(d.rescates||0), 0);
+  const totN = totA - totR;
+  document.getElementById('histTfoot').innerHTML = `
+    <tr class="tfoot">
+      <td>TOTAL — ${histData.length} meses</td>
+      <td class="pos">${fmtMM(totA)}</td>
+      <td class="neg">${fmtMM(totR)}</td>
+      <td class="${totN>=0?'pos':'neg'}">${fmtMM(totN)}</td>
+      <td colspan="3"></td>
+    </tr>`;
+}
+
+function downloadHistExcel() {
+  if (!histData.length) return alert('No hay datos históricos para descargar.');
+  const out = histData.map(d => {
+    const [y, m] = d.year_month.split('-');
+    const label = new Date(+y, +m-1, 1).toLocaleString('es-CL', { month: 'long', year: 'numeric' });
+    return {
+      'Mes': label.charAt(0).toUpperCase()+label.slice(1),
+      'Aportes (MM CLP)': +(d.aportes/1e6).toFixed(1),
+      'Rescates (MM CLP)': +(d.rescates/1e6).toFixed(1),
+      'Flujo Neto (MM CLP)': +((d.net_flow||0)/1e6).toFixed(1),
+      'Días cargados': d.days_count,
+      'Días hábiles': d.working_days,
+      'Cobertura (%)': d.working_days ? Math.round(d.days_count/d.working_days*100) : 0,
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(out);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Histórico Mensual');
+  XLSX.writeFile(wb, `FFMM_Historico_Mensual_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+async function recalcHistory() {
+  setStatus('Recalculando historial desde caché…', 'loading');
+  try {
+    const r = await api('/api/recalc-history', { method: 'POST' });
+    setStatus(`Historial recalculado: ${r.recalculated} meses actualizados.`);
+    histData = await api('/api/monthly-history?months=12');
+    renderHistTable();
+    buildHistChart();
+    renderHistCards();
+  } catch(e) { setStatus('Error: ' + e.message, 'error'); }
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────

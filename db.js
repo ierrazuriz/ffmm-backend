@@ -12,7 +12,16 @@ function getDB() {
         date TEXT PRIMARY KEY,
         data TEXT NOT NULL,
         fetched_at TEXT NOT NULL
-      )
+      );
+      CREATE TABLE IF NOT EXISTS monthly_summary (
+        year_month    TEXT PRIMARY KEY,
+        aportes       REAL NOT NULL,
+        rescates      REAL NOT NULL,
+        net_flow      REAL NOT NULL,
+        days_count    INTEGER NOT NULL,
+        working_days  INTEGER NOT NULL,
+        calculated_at TEXT NOT NULL
+      );
     `);
   }
   return db;
@@ -35,4 +44,22 @@ function listDates() {
   return getDB().prepare('SELECT date, fetched_at FROM daily_data ORDER BY date DESC LIMIT 30').all();
 }
 
-module.exports = { getCachedData, saveData, listDates };
+function saveMonthly(yearMonth, { aportes, rescates, netFlow, daysCount, workingDays }) {
+  getDB().prepare(`
+    INSERT OR REPLACE INTO monthly_summary
+    (year_month, aportes, rescates, net_flow, days_count, working_days, calculated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(yearMonth, aportes, rescates, netFlow, daysCount, workingDays, new Date().toISOString());
+}
+
+function getMonthly(yearMonth) {
+  return getDB().prepare('SELECT * FROM monthly_summary WHERE year_month = ?').get(yearMonth) || null;
+}
+
+function getMonthlyHistory(months = 12) {
+  return getDB().prepare(`
+    SELECT * FROM monthly_summary ORDER BY year_month DESC LIMIT ?
+  `).all(months).reverse(); // oldest first for chart
+}
+
+module.exports = { getCachedData, saveData, listDates, saveMonthly, getMonthly, getMonthlyHistory };
