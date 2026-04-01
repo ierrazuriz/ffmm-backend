@@ -1,17 +1,18 @@
 FROM node:20-slim
 
-# Instalar Python y dependencias del sistema
+# Herramientas de compilación (para better-sqlite3 / node-gyp) + Python
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-venv \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Instalar dependencias Node
+# Instalar dependencias Node (con compilación de native modules)
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
-# Instalar dependencias Python en venv
+# Instalar dependencias Python en venv aislado
 RUN python3 -m venv /app/venv
 RUN /app/venv/bin/pip install --no-cache-dir \
     google-auth \
@@ -21,7 +22,7 @@ RUN /app/venv/bin/pip install --no-cache-dir \
 
 COPY . .
 
+# Agregar venv al PATH para que Node pueda llamar python3
 ENV PATH="/app/venv/bin:$PATH"
 
-EXPOSE 3000
 CMD ["node", "index.js"]
