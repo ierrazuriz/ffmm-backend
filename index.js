@@ -308,9 +308,9 @@ app.listen(PORT, () => {
 
   // BCI cron
   scheduleBciCron();
-  // Si no hay datos BCI aún, sincronizar al arrancar
+  // Si no hay datos BCI aún, sincronizar 30s después del arranque (evitar OOM en startup)
   if (!getLatestBci()) {
-    console.log('[bci] Sin datos previos, sincronizando al inicio...');
-    runBciSync();
+    console.log('[bci] Sin datos previos, sincronizando en 30s...');
+    setTimeout(runBciSync, 30000);
   }
 });

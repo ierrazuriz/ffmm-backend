@@ -25,4 +25,5 @@ COPY . .
 # Agregar venv al PATH para que Node pueda llamar python3
 ENV PATH="/app/venv/bin:$PATH"
 
+EXPOSE 3000
 CMD ["node", "index.js"]
