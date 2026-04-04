@@ -10,8 +10,17 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { spawn } = require('child_process');
+const multer = require('multer');
+const XLSX = require('xlsx');
 const { fetchDailyData } = require('./scraper');
-const { getCachedData, saveData, listDates, saveMonthly, getMonthly, getMonthlyHistory, getLatestBci, saveBci } = require('./db');
+const {
+  getCachedData, saveData, listDates, saveMonthly, getMonthly, getMonthlyHistory,
+  getLatestBci, saveBci,
+  getHistorialArchivos, saveHistorialArchivo, getOperacionesByHistorial,
+  deleteHistorialArchivo, getBalanceAcciones, upsertAjusteBalance, deleteAjusteBalance,
+} = require('./db');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const DEFAULT_CATS = [
   'Accionario Nacional',
@@ -82,8 +91,8 @@ app.use(express.static(path.join(__dirname, 'public'), {
   }
 }));
 
-// GET / — health check for Railway
-app.get('/', (_req, res) => res.json({ status: 'ok', service: 'ffmm-backend' }));
+// GET / — serve the main HTML app
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // GET /api/daily?date=YYYY-MM-DD
 app.get('/api/daily', async (req, res) => {
@@ -216,6 +225,255 @@ app.post('/api/recalc-history', (req, res) => {
   res.json({ recalculated: results.length, results });
 });
 
+// ─── AYR endpoints (emf-ffmm compatible) ─────────────────────────────────
+
+/** Build the full AYR dataset: one row per working day with cumulative totals */
+function buildFetchData(cats) {
+  const useCats = cats || DEFAULT_CATS;
+  const dates = listDates().map(r => r.date).reverse(); // oldest first
+  const rows = [];
+  let acumAportes = 0, acumRescates = 0;
+
+  for (const date of dates) {
+    const cached = getCachedData(date);
+    if (!cached) continue;
+    const agg = aggregateRows(cached.data.rows, cached.data.headers, useCats);
+    acumAportes  += agg.aportes;
+    acumRescates += agg.rescates;
+    rows.push({
+      id: rows.length + 1,
+      fecha: date,
+      flujo_aportes: agg.aportes,
+      flujo_rescates: agg.rescates,
+      neto_aportes_rescates: agg.netFlow,
+      acumulado_aportes: acumAportes,
+      acumulado_rescates: acumRescates,
+      neto_acumulado: acumAportes - acumRescates,
+    });
+  }
+  return rows;
+}
+
+// GET /api/fetch-data
+app.get('/api/fetch-data', (_req, res) => {
+  try {
+    res.json(buildFetchData());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/update/:date — refresh a single date
+app.get('/api/update/:date', async (req, res) => {
+  const date = req.params.date;
+  try {
+    const result = await fetchDailyData(date);
+    saveData(date, result);
+    const [y, m] = date.split('-').map(Number);
+    const summary = calcMonthlySummary(y, m);
+    if (summary.daysCount > 0) saveMonthly(`${y}-${String(m).padStart(2,'0')}`, summary);
+    res.json({ ok: true, date, rows: result.rows.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/updatefrom/:date — refresh all dates from a given date up to yesterday
+app.get('/api/updatefrom/:date', async (req, res) => {
+  const fromDate = req.params.date;
+  const yesterday = getYesterday();
+  try {
+    // Collect all working days from fromDate to yesterday
+    const days = [];
+    const d = new Date(fromDate + 'T12:00:00Z');
+    const end = new Date(yesterday + 'T12:00:00Z');
+    while (d <= end) {
+      const dow = d.getUTCDay();
+      if (dow >= 1 && dow <= 5) days.push(d.toISOString().split('T')[0]);
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
+
+    const CONCURRENCY = 15;
+    let fetched = 0;
+    for (let i = 0; i < days.length; i += CONCURRENCY) {
+      const batch = days.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(date =>
+        fetchDailyData(date)
+          .then(result => { saveData(date, result); fetched++; })
+          .catch(() => {})
+      ));
+    }
+
+    // Recalculate monthly summaries
+    const monthsSeen = new Set(days.map(d => d.substring(0, 7)));
+    for (const ym of monthsSeen) {
+      const [y, m] = ym.split('-').map(Number);
+      const summary = calcMonthlySummary(y, m);
+      if (summary.daysCount > 0) saveMonthly(ym, summary);
+    }
+
+    res.json({ ok: true, message: `${fetched} días actualizados desde ${fromDate}`, fetched });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/download-excel — download AYR data as Excel
+app.get('/api/download-excel', (_req, res) => {
+  try {
+    const rows = buildFetchData();
+    const wsData = [
+      ['ID', 'Fecha', 'Flujo Aportes', 'Flujo Rescates', 'Neto A-R', 'Acum. Aportes', 'Acum. Rescates', 'Neto Acumulado'],
+      ...rows.map(r => [r.id, r.fecha, r.flujo_aportes, r.flujo_rescates, r.neto_aportes_rescates, r.acumulado_aportes, r.acumulado_rescates, r.neto_acumulado]),
+    ];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Aportes y Rescates');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="Aportes_y_Rescates.xlsx"');
+    res.send(buf);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Balance Acciones API ─────────────────────────────────────────────────
+
+// GET /api/balance-acciones
+app.get('/api/balance-acciones', (_req, res) => {
+  try {
+    res.json(getBalanceAcciones());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/historial-archivos
+app.get('/api/historial-archivos', (_req, res) => {
+  try {
+    res.json(getHistorialArchivos());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/historial-operaciones/:id
+app.get('/api/historial-operaciones/:id', (req, res) => {
+  try {
+    res.json(getOperacionesByHistorial(Number(req.params.id)));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/historial-archivos/:id
+app.delete('/api/historial-archivos/:id', (req, res) => {
+  try {
+    deleteHistorialArchivo(Number(req.params.id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/save-operaciones — receives FormData: archivo (file), operaciones (json string), nombreArchivo
+app.post('/api/save-operaciones', upload.single('archivo'), (req, res) => {
+  try {
+    const nombreArchivo = req.body.nombreArchivo || (req.file ? req.file.originalname : 'archivo.csv');
+    const operaciones = JSON.parse(req.body.operaciones || '[]');
+    const id = saveHistorialArchivo(nombreArchivo, 'csv', operaciones);
+    res.json({ ok: true, id, saved: operaciones.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/upload-balance-base — receives FormData: archivo (Excel)
+app.post('/api/upload-balance-base', upload.single('archivo'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file received' });
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const cols = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    const rawRows = XLSX.utils.sheet_to_json(ws, { header: cols, raw: false });
+
+    // Parse balance base: expect columns like Nemotecnico, Existencia, Precio
+    // Try to detect header row
+    let headerIdx = rawRows.findIndex(r =>
+      Object.values(r).some(v => /nemot|instrumento/i.test(String(v || '')))
+    );
+    if (headerIdx === -1) headerIdx = 0;
+    const headers = rawRows[headerIdx];
+    const dataRows = rawRows.slice(headerIdx + 1);
+
+    // Map columns
+    const colNem  = cols.find(c => /nemot|instrumento/i.test(String(headers[c] || '')));
+    const colQty  = cols.find(c => /exist|cantidad|qty/i.test(String(headers[c] || '')));
+    const colPrc  = cols.find(c => /precio|price/i.test(String(headers[c] || '')));
+
+    const operaciones = dataRows
+      .filter(r => colNem && r[colNem] && String(r[colNem]).trim())
+      .map(r => ({
+        Nemotecnico: String(r[colNem] || '').trim().toUpperCase(),
+        Cantidad: parseFloat(String(r[colQty] || '0').replace(/\./g, '').replace(',', '.')) || 0,
+        Precio: parseFloat(String(r[colPrc] || '0').replace(/\./g, '').replace(',', '.')) || 0,
+        Tipo: 'Compra',
+        Monto: 0,
+        Fecha: null,
+        Corredor: 'Balance Base',
+      }))
+      .filter(r => r.Cantidad > 0);
+
+    const id = saveHistorialArchivo(req.file.originalname, 'balance_base', operaciones);
+    res.json({ ok: true, id, saved: operaciones.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/actualizar-fila-balance — { nemotecnico, existencia (ignored for now, just updates price) }
+app.post('/api/actualizar-fila-balance', (req, res) => {
+  try {
+    const { nemotecnico, precioCierre } = req.body;
+    if (!nemotecnico) return res.status(400).json({ error: 'nemotecnico requerido' });
+    upsertAjusteBalance(nemotecnico, parseFloat(precioCierre) || 0);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/ajuste-manual-balance/:nemotecnico
+app.delete('/api/ajuste-manual-balance/:nemotecnico', (req, res) => {
+  try {
+    deleteAjusteBalance(req.params.nemotecnico);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/descargar-archivo-original/:id
+app.get('/api/descargar-archivo-original/:id', (_req, res) => {
+  res.status(404).json({ error: 'Archivo original no almacenado' });
+});
+
+// GET /api/descargar-csv-transformado/:id
+app.get('/api/descargar-csv-transformado/:id', (req, res) => {
+  try {
+    const ops = getOperacionesByHistorial(Number(req.params.id));
+    if (!ops.length) return res.status(404).json({ error: 'No operations found' });
+    const headers = Object.keys(ops[0]);
+    const csvLines = [headers.join(','), ...ops.map(op => headers.map(h => JSON.stringify(op[h] ?? '')).join(','))];
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="operaciones_${req.params.id}.csv"`);
+    res.send(csvLines.join('\n'));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── BCI API ──────────────────────────────────────────────────────────────
 app.get('/api/bci', (_req, res) => {
   const data = getLatestBci();
@@ -310,6 +568,45 @@ app.listen(PORT, () => {
     if (summary.daysCount > 0) { saveMonthly(ym, summary); saved++; }
   }
   if (saved) console.log(`[startup] Monthly history: ${saved} months stored`);
+
+  // Background backfill: fetch missing historical days so Histórico Anual loads on first visit
+  // Runs 10s after startup to let health check pass first; uses low concurrency to avoid OOM
+  setTimeout(async () => {
+    try {
+      const yesterday = getYesterday();
+      const days = new Set();
+      const ref = new Date();
+      for (let i = 12; i >= 0; i--) {
+        const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+        workingDaysOf(d.getFullYear(), d.getMonth() + 1).past.forEach(day => days.add(day));
+      }
+      const toFetch = [...days].filter(d => d <= yesterday && !getCachedData(d)).sort();
+      if (!toFetch.length) { console.log('[backfill] Nothing to fetch, cache complete'); return; }
+      console.log(`[backfill] Fetching ${toFetch.length} missing days in background...`);
+      let done = 0;
+      const CONCURRENCY = 2; // Low to avoid OOM on Railway free tier
+      for (let i = 0; i < toFetch.length; i += CONCURRENCY) {
+        const batch = toFetch.slice(i, i + CONCURRENCY);
+        await Promise.all(batch.map(date =>
+          fetchDailyData(date)
+            .then(result => { saveData(date, result); done++; })
+            .catch(() => { done++; }) // skip holidays/unavailable dates
+        ));
+      }
+      // Recalculate monthly summaries
+      const ref2 = new Date();
+      for (let i = 12; i >= 0; i--) {
+        const d = new Date(ref2.getFullYear(), ref2.getMonth() - i, 1);
+        const y = d.getFullYear(), m = d.getMonth() + 1;
+        const ym = `${y}-${String(m).padStart(2,'0')}`;
+        const summary = calcMonthlySummary(y, m);
+        if (summary.daysCount > 0) saveMonthly(ym, summary);
+      }
+      console.log(`[backfill] Done — ${done} days processed`);
+    } catch (err) {
+      console.error('[backfill] Error:', err.message);
+    }
+  }, 10000);
 
   // BCI cron (solo al mediodía, no en startup para evitar OOM)
   scheduleBciCron();
