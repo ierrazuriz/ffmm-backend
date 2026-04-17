@@ -22,6 +22,16 @@ function getDB() {
         working_days  INTEGER NOT NULL,
         calculated_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS fetch_data_cache (
+        fecha TEXT PRIMARY KEY,
+        flujo_aportes REAL NOT NULL,
+        flujo_rescates REAL NOT NULL,
+        neto_aportes_rescates REAL NOT NULL,
+        acumulado_aportes REAL NOT NULL,
+        acumulado_rescates REAL NOT NULL,
+        neto_acumulado REAL NOT NULL,
+        seeded_at TEXT NOT NULL
+      );
     `);
   }
   return db;
@@ -90,4 +100,29 @@ function saveBci(synced_at, fuente, data) {
   ).run(synced_at, fuente, JSON.stringify(data));
 }
 
-module.exports = { getCachedData, saveData, listDates, saveMonthly, getMonthly, getMonthlyHistory, getLatestBci, saveBci };
+
+function saveFetchDataCache(rows) {
+  const db = getDB();
+  const insert = db.prepare(`
+    INSERT OR REPLACE INTO fetch_data_cache
+    (fecha, flujo_aportes, flujo_rescates, neto_aportes_rescates, acumulado_aportes, acumulado_rescates, neto_acumulado, seeded_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertMany = db.transaction((rs) => {
+    for (const r of rs) {
+      insert.run(r.fecha, r.flujo_aportes, r.flujo_rescates, r.neto_aportes_rescates, r.acumulado_aportes, r.acumulado_rescates, r.neto_acumulado, new Date().toISOString());
+    }
+  });
+  insertMany(rows);
+}
+
+function getFetchDataCache() {
+  return getDB().prepare('SELECT * FROM fetch_data_cache ORDER BY fecha ASC').all();
+}
+
+function hasFetchDataCache() {
+  const row = getDB().prepare('SELECT COUNT(*) as cnt FROM fetch_data_cache').get();
+  return row && row.cnt > 0;
+}
+
+module.exports = { getCachedData, saveData, listDates, saveMonthly, getMonthly, getMonthlyHistory, getLatestBci, saveBci, saveFetchDataCache, getFetchDataCache, hasFetchDataCache };
