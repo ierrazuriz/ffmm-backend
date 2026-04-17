@@ -41,7 +41,7 @@ function saveData(date, data) {
 }
 
 function listDates() {
-  return getDB().prepare('SELECT date, fetched_at FROM daily_data ORDER BY date DESC LIMIT 30').all();
+  return getDB().prepare('SELECT date, fetched_at FROM daily_data ORDER BY date DESC LIMIT 2000').all();
 }
 
 function saveMonthly(yearMonth, { aportes, rescates, netFlow, daysCount, workingDays }) {
