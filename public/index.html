@@ -14,12 +14,12 @@
     .dark-mode{--bg:#1a1a1a;--bg2:#222;--text:#fff;--text2:#aaa;--border:#444;--hover-row:#2a1a10;--hover-text:#ff8c69;--last-reg:#2a1a10;--th-bg:#d73d26}
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;min-width:1200px;transition:background .3s,color .3s}
-    #app{max-width:1600px;margin:0 auto;padding:0 20px 40px}
-    .header{display:flex;align-items:center;justify-content:center;padding:20px 0 10px}
-    .header img{height:60px}
-    .nav{background:var(--primary);display:flex;align-items:center;padding:0 20px;gap:0;position:sticky;top:0;z-index:100;min-width:1200px;margin:0 -20px}
-    .nav-tab{background:none;border:2px solid transparent;border-radius:6px 6px 0 0;color:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;padding:12px 20px;transition:all .3s}
-    .nav-tab.active,.nav-tab:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3)}
+    #app{max-width:1600px;margin:0 auto;padding:0 20px 40px}h
+    .header{display:flex;flex-direction:column;align-items:center;padding:0 0 10px}.logo-container{display:flex;justify-content:center;padding:20px 0 10px}
+    .header img,.logo-img{height:80px}
+    .nav{background:var(--primary);display:flex;align-items:center;padding:5px 20px;gap:0;position:sticky;top:0;z-index:100;min-width:1200px;margin:0 -20px}
+    .nav-tab{background:none;border:none;border-radius:4px;color:#fff;cursor:pointer;font-family:inherit;font-size:16px;font-weight:600;padding:8px 16px;transition:all .3s;display:flex;align-items:center;gap:8px}
+    .nav-tab.active{background:#fff;color:var(--primary);border-radius:4px}.nav-tab:hover{background:rgba(255,255,255,.2)}
     .nav-spacer{flex:1}
     .dark-toggle{align-items:center;color:#fff;display:flex;font-size:13px;font-weight:500;gap:8px;margin-right:10px}
     .toggle-switch{background:#ccc;border-radius:12px;cursor:pointer;display:inline-block;height:24px;position:relative;transition:background .3s;width:44px}
@@ -129,15 +129,16 @@
 <body>
   <div id="app">
     <div class="header">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" height="60">
-        <rect x="5" y="5" width="22" height="22" rx="3" fill="#f26439"/>
-        <rect x="30" y="5" width="22" height="22" rx="3" fill="#f26439" opacity=".6"/>
-        <rect x="5" y="30" width="22" height="22" rx="3" fill="#f26439" opacity=".6"/>
-        <rect x="30" y="30" width="22" height="22" rx="3" fill="#f26439"/>
-        <text x="62" y="42" font-family="Inter,sans-serif" font-size="32" font-weight="800" fill="#f26439">EMF</text>
-        <text x="118" y="42" font-family="Inter,sans-serif" font-size="16" font-weight="400" fill="#999">APPS</text>
+      <div class="logo-container">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 80" height="80" class="logo-img">
+        <rect x="5" y="5" width="28" height="28" rx="4" fill="#f26439"/>
+        <rect x="36" y="5" width="28" height="28" rx="4" fill="#f26439" opacity=".6"/>
+        <rect x="5" y="36" width="28" height="28" rx="4" fill="#f26439" opacity=".6"/>
+        <rect x="36" y="36" width="28" height="28" rx="4" fill="#f26439"/>
+        <text x="76" y="52" font-family="Inter,sans-serif" font-size="38" font-weight="800" fill="#f26439">EMF</text>
+        <text x="154" y="52" font-family="Inter,sans-serif" font-size="18" font-weight="400" fill="#999">APPS</text>
       </svg>
-    </div>
+      </div>
     <nav class="nav">
       <button class="nav-tab active" id="tab-ayr" onclick="switchTab('ayr')">Aportes y Rescates <button class="info-button" onclick="event.stopPropagation();showInfo()" title="Info">&#9432;</button></button>
       <button class="nav-tab" id="tab-balance" onclick="switchTab('balance')">Cartera Acciones BCS</button>
@@ -151,22 +152,20 @@
     </nav>
     <div id="section-ayr" class="ayr-content">
       <div class="update-buttons">
-        <div class="update-single-section">
-          <label>Fecha especifica</label>
+        <div class="update-from-section">
           <div class="datepicker-with-button">
-            <button class="update-button-compact" id="btn-update-single" onclick="updateSingle()">Actualizar dia</button>
-            <input type="date" id="date-single" class="datepicker"/>
+            <button id="btn-update-from" class="update-button-compact" onclick="updateFrom()" title="Actualizar desde esta fecha">Actualizar desde</button>
+            <input type="text" id="date-from" class="datepicker" placeholder="Desde fecha">
           </div>
         </div>
-        <div class="update-from-section">
-          <label>Actualizar desde</label>
+        <div class="update-single-section">
           <div class="datepicker-with-button">
-            <button class="update-button-compact" id="btn-update-from" onclick="updateFrom()">Actualizar desde</button>
-            <input type="date" id="date-from" class="datepicker"/>
+            <button id="btn-update-single" class="update-button-compact" onclick="updateSingle()" title="Actualizar esta fecha específica">Actualizar día</button>
+            <input type="text" id="date-single" class="datepicker" placeholder="Fecha específica">
           </div>
         </div>
         <div class="last-update">
-          <span class="last-update-icon">&#128336;</span>
+          <svg aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width:16px;height:16px;color:#888"><path fill="currentColor" d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334.6 349c-3.9 5.3-11.4 6.5-16.8 2.6z"/></svg>
           <span id="last-update-text">Cargando...</span>
         </div>
       </div>
@@ -310,15 +309,15 @@ function dow(iso){if(!iso)return'';return DIAS[new Date(iso+'T12:00:00Z').getUTC
 function dark(){return document.body.classList.contains('dark-mode');}
 function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escA(s){return String(s||'').replace(/'/g,"&#39;");}
-async function loadAYR(){try{const r=await fetch(API+'/fetch-data');if(!r.ok)throw new Error('HTTP '+r.status);ayrData=await r.json();if(!Array.isArray(ayrData))throw new Error('Formato invalido');document.getElementById('last-update-text').textContent='Ultima actualizacion: '+new Date().toLocaleString('es-CL');renderAYR();renderCharts(ayrData);}catch(e){document.getElementById('ayr-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;color:red">Error: '+escH(e.message)+'</td></tr>';}}
+async function loadAYR(){try{const r=await fetch(API+'/fetch-data');if(!r.ok)throw new Error('HTTP '+r.status);ayrData=await r.json();if(!Array.isArray(ayrData))throw new Error('Formato invalido');document.getElementById('last-update-text').textContent='Última actualización: '+toDisplayDate(ayrData&&ayrData[0]?ayrData[0].fecha:'')+' 00:00';renderAYR();renderCharts(ayrData);}catch(e){document.getElementById('ayr-tbody').innerHTML='<tr><td colspan="8" style="text-align:center;color:red">Error: '+escH(e.message)+'</td></tr>';}}
 function sortAYR(k){if(ayrSortKey===k)ayrSortDir=ayrSortDir==='asc'?'desc':'asc';else{ayrSortKey=k;ayrSortDir='desc';}ayrPage=1;renderAYR();}
 function getSortedAYR(){return[...getFilteredAYR()].sort((a,b)=>{let va=ayrSortKey==='dia'?dow(a.fecha):(a[ayrSortKey]??''),vb=ayrSortKey==='dia'?dow(b.fecha):(b[ayrSortKey]??'');if(va<vb)return ayrSortDir==='asc'?-1:1;if(va>vb)return ayrSortDir==='asc'?1:-1;return 0;});}
 function renderAYR(){const fb=document.getElementById('filter-buttons');if(fb)fb.innerHTML=buildFilterButtons();const s=getSortedAYR(),tot=Math.max(1,Math.ceil(s.length/PAGE));if(ayrPage>tot)ayrPage=tot;const pg=s.slice((ayrPage-1)*PAGE,ayrPage*PAGE);const ld=ayrData.length?ayrData[ayrData.length-1].fecha:null;document.getElementById('ayr-tbody').innerHTML=pg.length===0?'<tr><td colspan="8" style="text-align:center">No hay data disponible</td></tr>':pg.map(r=>`<tr class="${r.fecha===ld?'last-registered':''}"><td>${dow(r.fecha)}</td><td>${fDate(r.fecha)}</td><td class="col-monto">${fN(r.flujo_aportes)}</td><td class="col-monto">${fN(r.flujo_rescates)}</td><td class="col-monto">${fN(r.neto_aportes_rescates)}</td><td class="col-monto">${fN(r.acumulado_aportes)}</td><td class="col-monto">${fN(r.acumulado_rescates)}</td><td class="col-monto">${fN(r.neto_acumulado)}</td></tr>`).join('');renderPg(tot);['dia','fecha','flujo_aportes','flujo_rescates','neto_aportes_rescates','acumulado_aportes','acumulado_rescates','neto_acumulado'].forEach(k=>{const el=document.getElementById('sort-'+k);if(el)el.textContent=ayrSortKey===k?(ayrSortDir==='asc'?'&#9650;':'&#9660;'):'';}); }
 function renderPg(tot){const pg=document.getElementById('pagination');if(tot<=1){pg.innerHTML='';return;}let h='',W=3,s=Math.max(1,ayrPage-W),e=Math.min(tot,ayrPage+W);if(s>1)h+=`<button onclick="goPg(1)">1</button>${s>2?'<span>...</span>':''}`;for(let i=s;i<=e;i++)h+=`<button class="${i===ayrPage?'active':''}" onclick="goPg(${i})">${i}</button>`;if(e<tot)h+=`${e<tot-1?'<span>...</span>':''}<button onclick="goPg(${tot})">${tot}</button>`;pg.innerHTML=h;}
 function goPg(n){ayrPage=n;renderAYR();window.scrollTo(0,0);}
 function renderCharts(d){const dk=dark(),gc=dk?'rgba(255,255,255,.1)':'rgba(0,0,0,.1)',tc=dk?'#fff':'#333';const d60=d.slice(-60),lb=d60.map(r=>fDate(r.fecha));if(cF)cF.destroy();if(cN)cN.destroy();const baseOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:tc}}},scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:11},maxTicksLimit:10}},y:{grid:{color:gc},ticks:{color:tc}}}};cF=new Chart(document.getElementById('chart-flujos').getContext('2d'),{type:'line',data:{labels:lb,datasets:[{label:'Aportes',data:d60.map(r=>r.flujo_aportes),borderColor:'rgba(75,192,192,1)',backgroundColor:'rgba(75,192,192,.2)',fill:false},{label:'Rescates',data:d60.map(r=>r.flujo_rescates),borderColor:'rgba(255,99,132,1)',backgroundColor:'rgba(255,99,132,.2)',fill:false},{label:'Neto',data:d60.map(r=>r.neto_aportes_rescates),borderColor:'#f26439',backgroundColor:'rgba(242,100,57,.2)',fill:false}]},options:baseOpts});cN=new Chart(document.getElementById('chart-neto').getContext('2d'),{type:'line',data:{labels:lb,datasets:[{label:'Neto Acumulado',data:d60.map(r=>r.neto_acumulado),borderColor:'#f26439',backgroundColor:'rgba(242,100,57,.15)',fill:true}]},options:{...baseOpts,scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:11},maxTicksLimit:10}},y:{grid:{color:gc},ticks:{color:tc,callback:v=>fN(v)}}}}});}
-async function updateSingle(){const date=document.getElementById('date-single').value;if(!date)return alert('Selecciona una fecha');if(new Date(date)>=new Date())return alert('La fecha debe ser anterior a hoy');const btn=document.getElementById('btn-update-single');btn.disabled=true;btn.textContent='...';btn.classList.add('processing');try{const r=await fetch(API+'/update/'+date);if(!r.ok)throw new Error('HTTP '+r.status);await loadAYR();alert('Datos para '+date+' actualizados.');}catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='Actualizar dia';btn.classList.remove('processing');}}
-async function updateFrom(){const date=document.getElementById('date-from').value;if(!date)return alert('Selecciona una fecha');if(new Date(date)>=new Date())return alert('La fecha debe ser anterior a hoy');const days=Math.ceil(Math.abs(new Date()-new Date(date))/86400000);if(!confirm('Actualizar desde '+date+'?\nAprox. '+Math.floor(days*.7)+' dias habiles.\nEsto puede tomar varios minutos.'))return;const btn=document.getElementById('btn-update-from');btn.disabled=true;btn.textContent='...';btn.classList.add('processing');try{const r=await fetch(API+'/updatefrom/'+date);if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();await loadAYR();alert('Actualizacion completada: '+(j.message||'OK'));}catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='Actualizar desde';btn.classList.remove('processing');}}
+async function updateSingle(){const date=fromDisplayDate(document.getElementById('date-single').value);if(!date)return alert('Selecciona una fecha');if(new Date(date)>=new Date())return alert('La fecha debe ser anterior a hoy');const btn=document.getElementById('btn-update-single');btn.disabled=true;btn.textContent='...';btn.classList.add('processing');try{const r=await fetch(API+'/update/'+date);if(!r.ok)throw new Error('HTTP '+r.status);await loadAYR();alert('Datos para '+date+' actualizados.');}catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='Actualizar dia';btn.classList.remove('processing');}}
+async function updateFrom(){const date=fromDisplayDate(document.getElementById('date-from').value);if(!date)return alert('Selecciona una fecha');if(new Date(date)>=new Date())return alert('La fecha debe ser anterior a hoy');const days=Math.ceil(Math.abs(new Date()-new Date(date))/86400000);if(!confirm('Actualizar desde '+date+'?\nAprox. '+Math.floor(days*.7)+' dias habiles.\nEsto puede tomar varios minutos.'))return;const btn=document.getElementById('btn-update-from');btn.disabled=true;btn.textContent='...';btn.classList.add('processing');try{const r=await fetch(API+'/updatefrom/'+date);if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();await loadAYR();alert('Actualizacion completada: '+(j.message||'OK'));}catch(e){alert('Error: '+e.message);}finally{btn.disabled=false;btn.textContent='Actualizar desde';btn.classList.remove('processing');}}
 async function downloadExcel(){try{const r=await fetch(API+'/download-excel');if(!r.ok)throw new Error('HTTP '+r.status);const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='Aportes_y_Rescates.xlsx';document.body.appendChild(a);a.click();a.remove();}catch(e){alert('Error: '+e.message);}}
 async function loadBal(){const err=document.getElementById('balance-error');err.classList.add('hidden');try{const r=await fetch(API+'/balance-acciones');if(!r.ok)throw new Error('HTTP '+r.status);const j=await r.json();balData=j.balance||j||[];const neteados=j.nemotecnicosNeteados||[];const nw=document.getElementById('balance-neteo-warning');if(neteados.length){nw.textContent='Instrumentos neteados (existencia 0): '+neteados.join(', ');nw.classList.remove('hidden');}else nw.classList.add('hidden');renderBal();}catch(e){err.textContent=e.message;err.classList.remove('hidden');}}
 function sortBalance(k){if(balSortKey===k)balSortDir=balSortDir==='asc'?'desc':'asc';else{balSortKey=k;balSortDir='desc';}renderBal();}
@@ -346,7 +345,24 @@ async function uploadBase(file,errEl){const fd=new FormData();fd.append('archivo
 async function procesarCSV(file,errEl){return new Promise(resolve=>{const reader=new FileReader();reader.onload=async ev=>{try{const data=new Uint8Array(ev.target.result),wb=XLSX.read(data,{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]];const cols=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB'];const rows=XLSX.utils.sheet_to_json(ws,{header:cols,raw:false});if(!rows.length)throw new Error('El archivo no contiene datos validos');const ops=[];for(let i=0;i<rows.length;i++){const row=rows[i];try{const nem=String(row.L||'').trim().toUpperCase();if(!nem||/^nemot|^instrumento|^nemo/i.test(nem))continue;const colG=String(row.G||'').trim().toLowerCase(),colH=String(row.H||'').trim().toLowerCase();const esC=colG.includes('compra')||colH.includes('compra');const qty=parseFloat(String(row.H||row.G||'0').replace(/\./g,'').replace(',','.'))||0;const prc=parseFloat(String(row.I||'0').replace(/\./g,'').replace(',','.'))||0;const fechaRaw=String(row.A||'').trim();let fecha=fechaRaw;if(/^\d{8}$/.test(fechaRaw))fecha=fechaRaw.slice(0,4)+'-'+fechaRaw.slice(4,6)+'-'+fechaRaw.slice(6,8);const codC=parseInt(row.Q||row.R||'0')||0;const corr=CORREDORES.find(c=>c.codigo===codC)?.nombre||String(row.Q||'');if(qty===0&&prc===0)continue;ops.push({Fecha:fecha,Tipo:esC?'Compra':'Venta',Nemotecnico:nem,Cantidad:qty,Precio:prc,Monto:qty*prc,Corredor:corr});}catch(re){console.warn('Fila '+i,re);}}if(!ops.length)throw new Error('No se encontraron operaciones validas');const fd=new FormData();fd.append('archivo',file);fd.append('operaciones',JSON.stringify(ops));fd.append('nombreArchivo',file.name);const r=await fetch(API+'/save-operaciones',{method:'POST',body:fd});if(!r.ok){const j=await r.json();throw new Error(j.error||'HTTP '+r.status);}alert('CSV procesado. '+ops.length+' operaciones guardadas.');await loadBal();await loadHist();resolve();}catch(e){errEl.textContent=e.message;errEl.classList.remove('hidden');resolve();}};reader.readAsArrayBuffer(file);});}
 function showInfo(){document.getElementById('info-modal').classList.remove('hidden');}
 function hideInfo(){document.getElementById('info-modal').classList.add('hidden');}
-document.addEventListener('DOMContentLoaded',()=>{const y=new Date();y.setDate(y.getDate()-1);const m=new Date();m.setDate(m.getDate()-30);const iso=d=>d.toISOString().split('T')[0];document.getElementById('date-single').value=iso(y);document.getElementById('date-from').value=iso(m);loadAYR();});
+// Helper: YYYY-MM-DD → DD-MM-YYYY for display
+function toDisplayDate(d) {
+  if (typeof d === 'string') { const [y,m,day] = d.split('-'); return day+'-'+m+'-'+y; }
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return day+'-'+m+'-'+y;
+}
+// Helper: DD-MM-YYYY → YYYY-MM-DD for API
+function fromDisplayDate(s) {
+  if (!s) return ''; const p=s.split('-'); if(p.length!==3) return s; return p[2]+'-'+p[1]+'-'+p[0];
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const today=new Date();
+  const from=new Date(today);
+  from.setDate(from.getDate()-30);
+  document.getElementById('date-single').value=toDisplayDate(today);
+  document.getElementById('date-from').value=toDisplayDate(from);
+  loadAYR();
+});
 </script>
 </body>
 </html>
