@@ -236,6 +236,8 @@ function buildFetchData(cats) {
 
   for (const date of dates) {
     const cached = getCachedData(date);
+    const yr = date.substring(0, 4);
+    if (rows.length === 0 || yr !== rows[rows.length-1].fecha.substring(0, 4)) { acumAportes = 0; acumRescates = 0; }
     if (!cached) continue;
     const agg = aggregateRows(cached.data.rows, cached.data.headers, useCats);
     acumAportes  += agg.aportes;
